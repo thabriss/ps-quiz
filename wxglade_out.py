@@ -6,6 +6,7 @@
 
 import wx
 import mysql.connector
+from random import randint
 
 # begin wxGlade: dependencies
 # end wxGlade
@@ -218,15 +219,14 @@ class MyFrame(wx.Frame):
         # end wxGlade
 
     def Start(self, event):  # wxGlade: MyFrame.<event_handler>
+        file = open('ustawienia.txt','w')
+        file.write(self.adresip.GetValue()+'\n')
+        file.write(self.port.GetValue()+'\n')
+        file.write(self.nick.GetValue())
+        file.close()
+        frame1 = MyFrame1(None, wx.ID_ANY, "")
         frame1.Show()
-        cnx = mysql.connector.connect(host=self.adresip.GetValue(),port=self.port.GetValue(),user='root',password='programowaniesieciowe', database='ps')
-        cursor = cnx.cursor()
-        query = ("SELECT * FROM asd ")
-        cursor.execute(query)
-        for (qwe, rty, wer,qwef) in cursor:
-            print("{}, {} was hired on {} {}".format(qwe, rty, wer,qwef))
-        cursor.close()
-        cnx.close()
+        frame.Hide()
         event.Skip()
         
 # end of class MyFrame
@@ -236,10 +236,14 @@ class MyFrame1(wx.Frame):
         # begin wxGlade: MyFrame1.__init__
         kwds["style"] = kwds.get("style", 0) | wx.DEFAULT_FRAME_STYLE
         wx.Frame.__init__(self, *args, **kwds)
-        self.odp_a = wx.Button(self, wx.ID_ANY, "A")
-        self.odp_b = wx.Button(self, wx.ID_ANY, "B")
-        self.odp_c = wx.Button(self, wx.ID_ANY, "C")
-        self.odp_d = wx.Button(self, wx.ID_ANY, "D")
+        self.pytanie = wx.StaticText(self, wx.ID_ANY, '', style=wx.ALIGN_CENTER)
+        self.punkty = wx.StaticText(self, wx.ID_ANY, '0', style=wx.ALIGN_LEFT)
+        self.ukryty = wx.StaticText(self, wx.ID_ANY, '0', style=wx.ALIGN_CENTER)
+        self.ukryty.Hide()
+        self.odp_a = wx.Button(self, wx.ID_ANY, '')
+        self.odp_b = wx.Button(self, wx.ID_ANY, '')
+        self.odp_c = wx.Button(self, wx.ID_ANY, '')
+        self.odp_d = wx.Button(self, wx.ID_ANY, '')
 
         self.__set_properties()
         self.__do_layout()
@@ -249,6 +253,39 @@ class MyFrame1(wx.Frame):
         self.Bind(wx.EVT_BUTTON, self.odpowiedz_c, self.odp_c)
         self.Bind(wx.EVT_BUTTON, self.odpowiedz_d, self.odp_d)
         # end wxGlade
+
+        file = open('ustawienia.txt','r')
+        adresip = file.readlines(1)
+        adresip = adresip[0].strip()
+        port = file.readlines(2)
+        port = port[0].strip()
+        nick = file.readlines(3)
+        nick = nick[0].strip()
+        file.close()
+        global cnx
+        global cursor
+        cnx = mysql.connector.connect(host=adresip,port=port,user='user',password='', database='ps')
+        cursor = cnx.cursor()
+        global waznaFunkcja
+        def waznaFunkcja(self):
+            query = ("SELECT id_pytania FROM pytania ORDER BY id_pytania DESC LIMIT 1")
+            cursor.execute(query)
+            ilePytan = cursor.fetchall()
+            randNum = randint(1, ilePytan[0][0])
+            query = ("SELECT * FROM pytania WHERE id_pytania=" + str(randNum))
+            cursor.execute(query)
+            pytanieBaza = cursor.fetchall()
+            pytanieBaza = pytanieBaza[0];
+            print (pytanieBaza)
+        
+            self.pytanie.SetLabel(pytanieBaza[1])
+            self.odp_a.SetLabel(pytanieBaza[2])
+            self.odp_b.SetLabel(pytanieBaza[3])
+            self.odp_c.SetLabel(pytanieBaza[4])
+            self.odp_d.SetLabel(pytanieBaza[5])
+            self.ukryty.SetLabel(str(pytanieBaza[6]))
+        waznaFunkcja(self)
+        
 
     def __set_properties(self):
         # begin wxGlade: MyFrame1.__set_properties
@@ -263,13 +300,11 @@ class MyFrame1(wx.Frame):
         grid_sizer_3 = wx.GridSizer(0, 4, 0, 0)
         label_3 = wx.StaticText(self, wx.ID_ANY, "Punkty:", style=wx.ALIGN_RIGHT)
         grid_sizer_3.Add(label_3, 0, wx.ALIGN_CENTER_VERTICAL | wx.ALIGN_RIGHT, 0)
-        punkty = wx.StaticText(self, wx.ID_ANY, "0000", style=wx.ALIGN_LEFT)
-        grid_sizer_3.Add(punkty, 0, wx.ALIGN_CENTER_VERTICAL, 0)
+        grid_sizer_3.Add(self.punkty, 0, wx.ALIGN_CENTER_VERTICAL, 0)
         grid_sizer_3.Add((0, 0), 0, 0, 0)
         grid_sizer_3.Add((0, 0), 0, 0, 0)
         sizer_2.Add(grid_sizer_3, 1, wx.EXPAND, 0)
-        pytanie = wx.StaticText(self, wx.ID_ANY, "Pytanie: aesfsefsa ?\nA) asdfsagsagd\nB) DFDSFSADF\nC) asdgadgdag\nD) sghsdfdfgdfg", style=wx.ALIGN_CENTER)
-        sizer_2.Add(pytanie, 0, wx.ALIGN_CENTER, 0)
+        sizer_2.Add(self.pytanie, 0, wx.ALIGN_CENTER, 0)
         grid_sizer_4.Add(self.odp_a, 0, wx.EXPAND, 0)
         grid_sizer_4.Add(self.odp_b, 0, wx.EXPAND, 0)
         grid_sizer_4.Add(self.odp_c, 0, wx.EXPAND, 0)
@@ -280,28 +315,62 @@ class MyFrame1(wx.Frame):
         self.SetSize((441, 318))
         # end wxGlade
 
+    global dodajPunkt
+    def dodajPunkt(self):
+        intpunkty = int(self.punkty.GetLabel())
+        intpunkty += 1
+        self.punkty.SetLabel(str(intpunkty))
+
+    global przegrana
+    def przegrana(self):
+        cursor.close()
+        cnx.close()
+        self.ukryty.SetLabel('przegrałeś')
+        self.ukryty.Show()
+        
+        
+
     def odpowiedz_a(self, event):  # wxGlade: MyFrame1.<event_handler>
-        wybrana_odpowiedz=1
+        wybrana_odpowiedz='1'
+        if wybrana_odpowiedz == self.ukryty.GetLabel():
+            waznaFunkcja(self)
+            dodajPunkt(self)
+        else:
+            przegrana(self)
         event.Skip()
 
     def odpowiedz_b(self, event):  # wxGlade: MyFrame1.<event_handler>
-        wybrana_odpowiedz=2
+        wybrana_odpowiedz='2'
+        if wybrana_odpowiedz == self.ukryty.GetLabel():
+            waznaFunkcja(self)
+            dodajPunkt(self)
+        else:
+            przegrana(self)
         event.Skip()
     def odpowiedz_c(self, event):  # wxGlade: MyFrame1.<event_handler>
-        wybrana_odpowiedz=3
+        wybrana_odpowiedz='3'
+        if wybrana_odpowiedz == self.ukryty.GetLabel():
+            waznaFunkcja(self)
+            dodajPunkt(self)
+        else:
+            przegrana(self)
         event.Skip()
     def odpowiedz_d(self, event):  # wxGlade: MyFrame1.<event_handler>
-        wybrana_odpowiedz=4
+        wybrana_odpowiedz='4'
+        if wybrana_odpowiedz == self.ukryty.GetLabel():
+            waznaFunkcja(self)
+            dodajPunkt(self)
+        else:
+            przegrana(self)
         event.Skip()
 
-        if wybrana_odpowiedz == poprawna odpowiedz:
-            punkty=punkty+1
+        
+
 # end of class MyFrame1
 
 if __name__ == "__main__":
     quiz = wx.PySimpleApp()
     frame = MyFrame(None, wx.ID_ANY, "")
-    frame1 = MyFrame1(None, wx.ID_ANY, "")
     quiz.SetTopWindow(frame)
     frame.Show()
     quiz.MainLoop()
